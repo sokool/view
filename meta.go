@@ -8,7 +8,3 @@ func (w Writer) Write(name string, v any) Writer {
 	w[name] = v
 	return w
 }
-
-func (w Writer) String() string {
-	return String(w)
-}
