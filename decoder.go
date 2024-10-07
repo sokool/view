@@ -56,7 +56,8 @@ func (d *Decoder) toValue(v reflect.Value) (string, error) {
 		return d.toSlice(v)
 	case reflect.String:
 		return strconv.Quote(v.String()), nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return strconv.FormatInt(v.Int(), 10), nil
 	case reflect.Float32, reflect.Float64:
 		return strconv.FormatFloat(v.Float(), 'f', -1, 64), nil
