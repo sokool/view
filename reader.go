@@ -69,6 +69,9 @@ func (r *Reader) To(value any) error {
 	if r.err != nil {
 		return r.err
 	}
+	if r.IsEmpty() {
+		return nil
+	}
 	return _json.Unmarshal(r.bytes, value)
 }
 

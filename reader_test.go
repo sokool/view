@@ -51,8 +51,9 @@ func TestReader_JSON(t *testing.T) {
 	if f != 30.6 {
 		t.Fatalf("expected 30.6, got %f", f)
 	}
-	if s = ""; r.Select("abc").To(&s) != nil && s != "" { // abc attribute not exists
-		t.Fatalf("expected empty string, got %s", s)
+	s = ""
+	if err := r.Select("abc").To(&s); err != nil || s != "" { // abc attribute not exists
+		t.Fatalf("expected empty string withou error, got %v error and %s value", err, s)
 	}
 	if n := r.Select("a").Select("b"); !n.IsEmpty() {
 		t.Fatalf("expected empty meta")
