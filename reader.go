@@ -2,32 +2,88 @@ package view
 
 import (
 	_json "encoding/json"
+	"strings"
 
 	"github.com/bhmj/jsonslice"
 )
 
 type Reader struct {
-	xpath map[string]any
+	bytes []byte
+	err   error
 }
 
-func Read(xpath string, to any) *Reader {
-	return &Reader{map[string]any{xpath: to}}
+func JSONReader(json []byte) *Reader {
+	return &Reader{json, nil}
 }
 
-func (r *Reader) Read(xpath string, to any) *Reader { r.xpath[xpath] = to; return r }
-
-func (r *Reader) UnmarshalJSON(from []byte) error {
-	for q := range r.xpath {
-		b, err := jsonslice.Get(from, q)
-		if err != nil {
-			return err
-		}
-		if b == nil {
-			continue
-		}
-		if err = _json.Unmarshal(b, r.xpath[q]); err != nil {
-			return err
-		}
+// Number returns the float64 at the given JSON path.
+func (r *Reader) Number(path string) (f float64) {
+	if err := r.Select(path).To(&f); err != nil {
+		r.report(err)
 	}
-	return nil
+	return f
+}
+
+// Text returns the string at the given JSON path.
+func (r *Reader) Text(path string) (s string) {
+	if err := r.Select(path).To(&s); err != nil {
+		r.report(err)
+	}
+	return s
+}
+
+// Bool returns the bool at the given JSON path.
+func (r *Reader) Bool(path string) (b bool) {
+	if err := r.Select(path).To(&b); err != nil {
+		r.report(err)
+	}
+	return b
+}
+
+// Select returns the Writer at the given JSON path.
+func (r *Reader) Select(path string) *Reader {
+	if r.err != nil {
+		return r
+	}
+	if path = strings.TrimSpace(path); len(path) >= 1 && path[0] != '$' {
+		path = "$." + path
+	}
+	b, err := jsonslice.Get(r.bytes, path)
+	if err != nil {
+		return &Reader{nil, err}
+	}
+	return JSONReader(b)
+}
+
+// Read reads the value at the given JSON path into the given value.
+func (r *Reader) Read(path string, to any) *Reader {
+	if err := r.Select(path).To(to); err != nil {
+		r.report(err)
+		return r
+	}
+	return r
+}
+
+// To transform a Writer into the given value.
+func (r *Reader) To(value any) error {
+	if r.err != nil {
+		return r.err
+	}
+	return _json.Unmarshal(r.bytes, value)
+}
+
+func (r *Reader) Error() error {
+	return r.err
+}
+
+func (r *Reader) IsEmpty() bool {
+	return r.bytes == nil
+}
+
+func (r *Reader) String() string {
+	return string(r.bytes)
+}
+
+func (r *Reader) report(err error) {
+	r.err = err
 }

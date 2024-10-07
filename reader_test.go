@@ -7,53 +7,66 @@ import (
 )
 
 func TestReader_JSON(t *testing.T) {
-	j := []byte(`
-{
-  "name": {"first": "Tom", "last": "Anderson"},
-  "age":37,
-  "children": ["Sara","Alex","Jack"],
-  "fav.movie": "Deer Hunter",
-  "friends": [
-    {"first": "Dale", "last": "Murphy", "age": 44, "nets": ["ig", "fb", "tw"]},
-    {"first": "Roger", "last": "Craig", "age": 68, "nets": ["fb", "tw"]},
-    {"first": "Jane", "last": "Murphy", "age": 47, "nets": ["ig", "tw"]}
-  ]
+	j := []byte(`{
+	"id": 1,
+	"name": "John",
+	"age": 30.6,
+	"hired": true,
+	"location": {
+		"point": {
+			"lat": 40.7128,
+			"lon": -74.0060
+		},
+		"address": "New York Hudson 60"
+	},
+	"jobs": [
+		{"title": "developer", "salary": "100$"},
+		{"title": "manager", "salary": "200$"},
+		{"title": "ceo", "salary": "300$"}
+	],
+	"skills": ["go", "js", "python"]
 }
 `)
 
-	type name struct {
-		First,
-		Last string
-	}
-	type model struct {
-		name    name
-		friends []name
-	}
+	r := view.JSONReader(j)
 
-	var m model
-	if err := view.Read("$.name", &m.name).Read("$.friends", &m.friends).UnmarshalJSON(j); err != nil {
-		t.Fatal(err)
+	if r.Text("name") != "John" {
+		t.Fatalf("expected John, got %s", r.Text("name"))
 	}
-	if m.name.First != "Tom" || m.name.Last != "Anderson" {
-		t.Fatal()
+	if r.Number("location.point.lat") != 40.7128 {
+		t.Fatalf("expected 40.7128, got %f", r.Number("location.point.lat"))
 	}
-	if len(m.friends) != 3 {
-		t.Fatal()
+	if r.Bool("hired") != true {
+		t.Fatalf("expected true, got %t", r.Bool("hired"))
 	}
-	if n := m.friends[0]; n.First != "Dale" {
-		t.Fatal()
+	var s string
+	var f float64
+	var p map[string]any
+	if err := r.Read("name", &s).Read("age", &f).Read("location.point", &p).Error(); err != nil {
+		t.Fatalf("expected nil, got %s err", err)
 	}
-	if n := m.friends[1]; n.First != "Roger" {
-		t.Fatal()
+	if s != "John" {
+		t.Fatalf("expected John, got %s", s)
 	}
-	if n := m.friends[2]; n.First != "Jane" {
-		t.Fatal()
+	if f != 30.6 {
+		t.Fatalf("expected 30.6, got %f", f)
 	}
-	var n []name
-	if err := view.Read("$.friends[?(@.age > 50)]", &n).UnmarshalJSON(j); err != nil {
-		t.Fatal(err)
+	if s = ""; r.Select("abc").To(&s) != nil && s != "" { // abc attribute not exists
+		t.Fatalf("expected empty string, got %s", s)
 	}
-	if len(n) != 1 || n[0].Last != "Craig" {
-		t.Fatal()
+	if n := r.Select("a").Select("b"); !n.IsEmpty() {
+		t.Fatalf("expected empty meta")
+	}
+	if f = r.Select("location.point").Number("lat"); f != 40.7128 {
+		t.Fatalf("expected 40.7128, got %f", f)
+	}
+	if s = r.Select("jobs[1]").Text("title"); s != "manager" {
+		t.Fatalf("expected manager, got %s", s)
+	}
+	if s = r.Select("jobs[?(@.title == 'manager')]").Text("[0].salary"); s != "200$" {
+		t.Fatalf("expected 200$, got %s", s)
+	}
+	if err := r.Select("jobs[1.title").Error(); err == nil {
+		t.Fatalf("expected error, got nil")
 	}
 }

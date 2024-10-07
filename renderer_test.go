@@ -1,45 +1,82 @@
 package view_test
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
-	"github.com/sokool/view"
+	. "github.com/sokool/view"
 )
 
-func TestJSON(t *testing.T) {
-	//b, err := view.JSON([]foo{"two", "one", "six"}, "a", "b", "c")
-	//assert.NoError(t, err)
-	//assert.Equal(t, b, view.Bytes(`[{"bar":"-bar:hi-","baz":[{"a":1},{"b":"two"}],"luz":{"one":1,"two":2},"name":"-foo:two-"},{"bar":"-bar:hi-","baz":[{"a":1},{"b":"one"}],"luz":{"one":1,"two":2},"name":"-foo:one-"},{"bar":"-bar:hi-","baz":[{"a":1},{"b":"six"}],"luz":{"one":1,"two":2},"name":"-foo:six-"}]`))
-	//
-	//b, err = view.JSON(map[string]foo{"high": ("five"), "fourty": ("eight"), "ninthy": ("six")}, "1", "2", "3")
-	//assert.NoError(t, err)
-	//assert.Equal(t, b, view.Bytes(`{"fourty":{"bar":"-bar:hi-","baz":[{"a":1},{"b":"eight"}],"luz":{"one":1,"two":2},"name":"-foo:eight-"},"high":{"bar":"-bar:hi-","baz":[{"a":1},{"b":"five"}],"luz":{"one":1,"two":2},"name":"-foo:five-"},"ninthy":{"bar":"-bar:hi-","baz":[{"a":1},{"b":"six"}],"luz":{"one":1,"two":2},"name":"-foo:six-"}}`))
-	//
-	//b, err = view.JSON(foo("hi there"), "!", "@", "3")
-	//assert.NoError(t, err)
-	//assert.Equal(t, b, view.Bytes(`{"bar":"-bar:hi-","baz":[{"a":1},{"b":"hi there"}],"luz":{"one":1,"two":2},"name":"-foo:hi there-"}`))
+func TestRenderer(t *testing.T) {
+	type (
+		scenario struct {
+			payload any
+			expects string
+		}
+		object = map[string]any
+	)
+	cases := map[string]scenario{
+		"nil->null": {
+			payload: nil,
+			expects: `null`,
+		},
+		"int->number": {
+			payload: 56,
+			expects: `56`,
+		},
+		"float->number": {
+			payload: 8.929349,
+			expects: `8.929349`,
+		},
+		"slice->array": {
+			payload: []any{1, 2, 3},
+			expects: `[1,2,3]`,
+		},
+		"map->object": {
+			payload: object{"one": 1, "two": 2},
+			expects: `{"one":1,"two":2}`,
+		},
+		"writer renderer": {
+			payload: Writer{
+				"internal": Writer{
+					"one": 1,
+				},
+				"name": Name("John"),
+			},
+			expects: `{"internal":{"one":1},"name":"Mr. John"}`,
+		},
+		"x": {
+			payload: foo{One: "John"},
+			expects: `{"firstname":"Mr. John"}`,
+		},
+	}
+
+	for n, c := range cases {
+		t.Run(n, func(t *testing.T) {
+			b, err := Decode(c.payload, RendererDecorator)
+			if err != nil {
+				t.Fatalf("no error expected, got %v", err)
+			}
+			if bytes.Compare(b, []byte(c.expects)) != 0 {
+				t.Fatalf("expected %v, got %s", c.expects, b)
+			}
+		})
+	}
+
 }
 
-type bar string
+type Name string
 
-func (b bar) Render(...string) (any, error) {
-	return fmt.Sprintf("-bar:%v-", b), nil
+func (n Name) Render(s string) any {
+	if n == "" {
+		return ""
+	}
+	return fmt.Sprintf("Mr. %s", n)
 }
 
-type foo string
-
-func (f foo) Render(types ...string) (any, error) {
-	return view.Writer{
-		"bar":  bar("hi"),
-		"name": fmt.Sprintf("-foo:%v-", f),
-		"baz": view.Writers{
-			{"a": 1},
-			{"b": string(f)},
-		},
-		"luz": map[string]int{
-			"one": 1,
-			"two": 2,
-		},
-	}, nil
+type foo struct {
+	One  Name `json:"firstname"`
+	Two  Name `json:"lastname,omitempty"`
+	Test int  `json:"-"`
 }
