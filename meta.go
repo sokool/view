@@ -14,6 +14,13 @@ func (w Writer) Write(name string, v any) Writer {
 	return w
 }
 
+func (w Writer) Text(name string) string {
+	if n, ok := w[name].(string); ok {
+		return n
+	}
+	return ""
+
+}
 func (w Writer) GoString() string {
 	return stringify(w)
 }
