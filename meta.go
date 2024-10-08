@@ -21,6 +21,7 @@ func (w Writer) Text(name string) string {
 	return ""
 
 }
+
 func (w Writer) GoString() string {
 	return stringify(w)
 }

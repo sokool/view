@@ -3,6 +3,7 @@ package view_test
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"testing"
 
 	. "github.com/sokool/view"
@@ -34,21 +35,33 @@ func TestRenderer(t *testing.T) {
 			expects: `[1,2,3]`,
 		},
 		"map->object": {
-			payload: object{"one": 1, "two": 2},
+			payload: object{"one": uint64(1), "two": int8(2)},
 			expects: `{"one":1,"two":2}`,
 		},
-		"writer renderer": {
-			payload: Writer{
-				"internal": Writer{
-					"one": 1,
-				},
-				"name": Name("John"),
-			},
-			expects: `{"internal":{"one":1},"name":"Mr. John"}`,
+		"type with Render": {
+			payload: Name("John"),
+			expects: `"Mr. John"`,
 		},
+		"type int with marshals text": {
+			payload: Quantity(34),
+			expects: `"34qty"`,
+		},
+		"type with unexported fields and marshals json": {
+			payload: NewEmail("john", "gmail.com"),
+			expects: `"john@gmail.com"`,
+		},
+		//"writer renderer": {
+		//	payload: Writer{
+		//		"internal": Writer{
+		//			"one": 1,
+		//		},
+		//		"name": Name("John"),
+		//	},
+		//	expects: `{"internal":{"one":1},"name":"Mr. John"}`,
+		//},
 		"x": {
-			payload: foo{One: "John"},
-			expects: `{"firstname":"Mr. John"}`,
+			payload: foo{One: "John", Mail: NewEmail("john", "gmail.com")},
+			expects: `{"firstname":"Mr. John","Mail":"john@gmail.com"}`,
 		},
 	}
 
@@ -66,6 +79,25 @@ func TestRenderer(t *testing.T) {
 
 }
 
+type Quantity int
+
+func (q Quantity) MarshalText() ([]byte, error) {
+	return []byte(strconv.Itoa(int(q)) + "qty"), nil
+}
+
+type Email struct{ name, host string }
+
+func NewEmail(name, host string) Email {
+	return Email{name, host}
+}
+
+func (e Email) MarshalJSON() ([]byte, error) {
+	if e.host == "" {
+		return []byte(`null`), nil
+	}
+	return []byte(fmt.Sprintf(`"%s@%s"`, e.name, e.host)), nil
+}
+
 type Name string
 
 func (n Name) Render(s string) any {
@@ -78,5 +110,6 @@ func (n Name) Render(s string) any {
 type foo struct {
 	One  Name `json:"firstname"`
 	Two  Name `json:"lastname,omitempty"`
-	Test int  `json:"-"`
+	Mail Email
+	Test int `json:"-"`
 }

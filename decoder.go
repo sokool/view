@@ -1,7 +1,7 @@
 package view
 
 import (
-	"fmt"
+	"encoding/json"
 	"reflect"
 	"sort"
 	"strconv"
@@ -33,8 +33,6 @@ func (d *Decoder) Decode(v any) ([]byte, error) {
 }
 
 func (d *Decoder) toValue(v reflect.Value) (string, error) {
-	//o := v.Interface()
-	//fmt.Printf("%T:%v \n", o, o)
 	if v.IsValid() {
 		for _, r := range d.decorators {
 			w, err := r(v)
@@ -49,30 +47,27 @@ func (d *Decoder) toValue(v reflect.Value) (string, error) {
 	// Handle different types using reflection
 	switch v.Kind() {
 	case reflect.Struct:
-		return d.toStruct(v)
+		s, err := d.toStruct(v)
+		if err != nil {
+			return "", err
+		}
+		if s == "{}" {
+			return d.toBytes(v)
+		}
+		return s, nil
 	case reflect.Map:
 		return d.toMap(v)
 	case reflect.Slice, reflect.Array:
 		return d.toSlice(v)
-	case reflect.String:
-		return strconv.Quote(v.String()), nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return strconv.FormatInt(v.Int(), 10), nil
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return strconv.FormatUint(v.Uint(), 10), nil
-	case reflect.Float32, reflect.Float64:
-		return strconv.FormatFloat(v.Float(), 'f', -1, 64), nil
-	case reflect.Bool:
-		return strconv.FormatBool(v.Bool()), nil
-	case reflect.Invalid:
-		return "null", nil
 	case reflect.Ptr, reflect.Interface:
 		if v.IsNil() {
 			return "null", nil
 		}
 		return d.toValue(v.Elem())
+	case reflect.Invalid:
+		return "null", nil
 	default:
-		return "", fmt.Errorf("unsupported %T type for JSON encoding", v.String())
+		return d.toBytes(v)
 	}
 }
 
@@ -193,4 +188,9 @@ func (d *Decoder) toSlice(v reflect.Value) (string, error) {
 
 func (d *Decoder) toKey(v reflect.Value) (string, error) {
 	return strconv.Quote(v.String()), nil
+}
+
+func (d *Decoder) toBytes(rv reflect.Value) (string, error) {
+	b, err := json.Marshal(rv.Interface())
+	return string(b), err
 }
