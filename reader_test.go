@@ -1,6 +1,7 @@
 package view_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/sokool/view"
@@ -69,5 +70,28 @@ func TestReader_JSON(t *testing.T) {
 	}
 	if err := r.Select("jobs[1.title").Error(); err == nil {
 		t.Fatalf("expected error, got nil")
+	}
+	var ss []string
+	if err := r.Select("jobs[*].title").To(&ss); err != nil || fmt.Sprintf("%v", ss) != "[developer manager ceo]" {
+		t.Fatalf("expected nil, got %s", err)
+	}
+}
+
+func TestMeta_Each(t *testing.T) {
+	slice := []byte(`[{"name": "Tom", "age": 32},{"name": "Jerry", "age": 30},
+			    {"name": "Spike", "age": 40},{"name": "Tyke", "age": 20}]`)
+
+	var m = view.JSONReader(slice)
+	var ss []string
+	if err := m.Select("[*].name").To(&ss); err != nil || fmt.Sprintf("%v", ss) != "[Tom Jerry Spike Tyke]" {
+		t.Fatalf("expected nil, got %s", err)
+	}
+
+	var s string
+	for n := range m.Each {
+		s += n.Text("name")
+	}
+	if s != "TomJerrySpikeTyke" {
+		t.Fatalf("expected TomJerrySpikeTyke, got %s", s)
 	}
 }

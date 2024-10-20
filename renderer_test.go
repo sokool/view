@@ -50,6 +50,10 @@ func TestRenderer(t *testing.T) {
 			payload: NewEmail("john", "gmail.com"),
 			expects: `"john@gmail.com"`,
 		},
+		"type with exported and unexported fields and marhshal json": {
+			payload: NewBar("Greg", "Ohio"),
+			expects: `{"Name":"Mr. Greg"}`,
+		},
 		//"writer renderer": {
 		//	payload: Writer{
 		//		"internal": Writer{
@@ -77,6 +81,19 @@ func TestRenderer(t *testing.T) {
 		})
 	}
 
+}
+
+type Bar struct {
+	Name    Name
+	address string
+}
+
+func NewBar(name, address string) Bar {
+	return Bar{Name(name), address}
+}
+
+func (b Bar) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{"name": "%s", "address":"%s"}`, b.Name, b.address)), nil
 }
 
 type Quantity int

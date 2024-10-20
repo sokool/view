@@ -2,6 +2,7 @@ package view
 
 import (
 	_json "encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/bhmj/jsonslice"
@@ -41,10 +42,11 @@ func (r *Reader) Bool(path string) (b bool) {
 }
 
 // Select returns the Writer at the given JSON path.
-func (r *Reader) Select(path string) *Reader {
+func (r *Reader) Select(path string, args ...any) *Reader {
 	if r.err != nil {
 		return r
 	}
+	path = fmt.Sprintf(path, args...)
 	if path = strings.TrimSpace(path); len(path) >= 1 && path[0] != '$' {
 		path = "$." + path
 	}
@@ -73,6 +75,14 @@ func (r *Reader) To(value any) error {
 		return nil
 	}
 	return _json.Unmarshal(r.bytes, value)
+}
+
+func (r *Reader) Each(fn func(*Reader) bool) {
+	for i := 0; ; i++ {
+		if n := r.Select("[%d]", i); n.IsEmpty() || !fn(n) {
+			return
+		}
+	}
 }
 
 func (r *Reader) Error() error {
