@@ -50,22 +50,16 @@ func TestRenderer(t *testing.T) {
 			payload: NewEmail("john", "gmail.com"),
 			expects: `"john@gmail.com"`,
 		},
-		"type with exported and unexported fields and marhshal json": {
-			payload: NewBar("Greg", "Ohio"),
-			expects: `{"Name":"Mr. Greg"}`,
+		"type with multiple renderer fields": {
+			payload: Writer{
+				"name":    Name("Greg"),
+				"address": "New York",
+			},
+			expects: `{"address":"New York","name":"Mr. Greg"}`,
 		},
-		//"writer renderer": {
-		//	payload: Writer{
-		//		"internal": Writer{
-		//			"one": 1,
-		//		},
-		//		"name": Name("John"),
-		//	},
-		//	expects: `{"internal":{"one":1},"name":"Mr. John"}`,
-		//},
 		"x": {
 			payload: foo{One: "John", Mail: NewEmail("john", "gmail.com")},
-			expects: `{"firstname":"Mr. John","Mail":"john@gmail.com"}`,
+			expects: `{"firstname":"Mr. John","mail":"john@gmail.com"}`,
 		},
 	}
 
@@ -80,20 +74,6 @@ func TestRenderer(t *testing.T) {
 			}
 		})
 	}
-
-}
-
-type Bar struct {
-	Name    Name
-	address string
-}
-
-func NewBar(name, address string) Bar {
-	return Bar{Name(name), address}
-}
-
-func (b Bar) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`{"name": "%s", "address":"%s"}`, b.Name, b.address)), nil
 }
 
 type Quantity int
@@ -125,8 +105,8 @@ func (n Name) Render(s string) any {
 }
 
 type foo struct {
-	One  Name `json:"firstname"`
-	Two  Name `json:"lastname,omitempty"`
-	Mail Email
-	Test int `json:"-"`
+	One  Name  `json:"firstname"`
+	Two  Name  `json:"lastname,omitempty"`
+	Mail Email `json:"mail"`
+	Test int   `json:"-"`
 }
