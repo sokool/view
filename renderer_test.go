@@ -39,26 +39,26 @@ func TestRenderer(t *testing.T) {
 			expects: `{"one":1,"two":2}`,
 		},
 		"type with Render": {
-			payload: Name("John"),
+			payload: name("John"),
 			expects: `"Mr. John"`,
 		},
 		"type int with marshals text": {
-			payload: Quantity(34),
+			payload: quantity(34),
 			expects: `"34qty"`,
 		},
 		"type with unexported fields and marshals json": {
-			payload: NewEmail("john", "gmail.com"),
+			payload: newEmail("john", "gmail.com"),
 			expects: `"john@gmail.com"`,
 		},
 		"type with multiple renderer fields": {
 			payload: Writer{
-				"name":    Name("Greg"),
+				"name":    name("Greg"),
 				"address": "New York",
 			},
 			expects: `{"address":"New York","name":"Mr. Greg"}`,
 		},
 		"x": {
-			payload: foo{One: "John", Mail: NewEmail("john", "gmail.com")},
+			payload: foo{One: "John", Mail: newEmail("john", "gmail.com")},
 			expects: `{"firstname":"Mr. John","mail":"john@gmail.com"}`,
 		},
 	}
@@ -76,28 +76,28 @@ func TestRenderer(t *testing.T) {
 	}
 }
 
-type Quantity int
+type quantity int
 
-func (q Quantity) MarshalText() ([]byte, error) {
+func (q quantity) MarshalText() ([]byte, error) {
 	return []byte(strconv.Itoa(int(q)) + "qty"), nil
 }
 
-type Email struct{ name, host string }
+type email struct{ name, host string }
 
-func NewEmail(name, host string) Email {
-	return Email{name, host}
+func newEmail(name, host string) email {
+	return email{name, host}
 }
 
-func (e Email) MarshalJSON() ([]byte, error) {
+func (e email) MarshalJSON() ([]byte, error) {
 	if e.host == "" {
 		return []byte(`null`), nil
 	}
 	return []byte(fmt.Sprintf(`"%s@%s"`, e.name, e.host)), nil
 }
 
-type Name string
+type name string
 
-func (n Name) Render(s string) any {
+func (n name) Render(s string) any {
 	if n == "" {
 		return ""
 	}
@@ -105,8 +105,8 @@ func (n Name) Render(s string) any {
 }
 
 type foo struct {
-	One  Name  `json:"firstname"`
-	Two  Name  `json:"lastname,omitempty"`
-	Mail Email `json:"mail"`
+	One  name  `json:"firstname"`
+	Two  name  `json:"lastname,omitempty"`
+	Mail email `json:"mail"`
 	Test int   `json:"-"`
 }

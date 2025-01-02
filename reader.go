@@ -1,6 +1,7 @@
 package view
 
 import (
+	"bytes"
 	_json "encoding/json"
 	"fmt"
 	"strings"
@@ -74,7 +75,19 @@ func (r *Reader) To(value any) error {
 	if r.IsEmpty() {
 		return nil
 	}
-	return _json.Unmarshal(r.bytes, value)
+	b := r.bytes
+	switch value.(type) {
+	case *int, *int8, *int16, *int32, *int64, *uint, *uint8, *uint16, *uint32, *uint64,
+		*float32, *float64, *complex64, *complex128:
+		// Check if the first and last characters are apostrophes
+		if b = bytes.TrimSpace(r.bytes); len(b) > 1 && b[0] == '"' && b[len(b)-1] == '"' {
+			b = b[1 : len(b)-1] // Remove the apostrophes
+		}
+	default:
+
+	}
+
+	return _json.Unmarshal(b, value)
 }
 
 func (r *Reader) Each(fn func(*Reader) bool) {
@@ -90,11 +103,19 @@ func (r *Reader) Error() error {
 }
 
 func (r *Reader) IsEmpty() bool {
-	return r.bytes == nil
+	return len(r.bytes) == 0 || bytes.Equal(r.bytes, []byte("null"))
 }
 
 func (r *Reader) String() string {
 	return string(r.bytes)
+}
+
+func (r *Reader) Sprintf(msg string, jsonPath ...string) string {
+	var args = make([]any, len(jsonPath))
+	for i, p := range jsonPath {
+		args[i] = r.Text(p)
+	}
+	return fmt.Sprintf(msg, args...)
 }
 
 func (r *Reader) report(err error) {

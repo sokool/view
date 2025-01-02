@@ -75,6 +75,9 @@ func TestReader_JSON(t *testing.T) {
 	if err := r.Select("jobs[*].title").To(&ss); err != nil || fmt.Sprintf("%v", ss) != "[developer manager ceo]" {
 		t.Fatalf("expected nil, got %s", err)
 	}
+	if s := r.Sprintf("%s: %s", "name", "location.address"); s != "John: New York Hudson 60" {
+		t.Fatalf("expected John New York Hudson 60, got %s", s)
+	}
 }
 
 func TestMeta_Each(t *testing.T) {
